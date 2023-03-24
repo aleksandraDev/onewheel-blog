@@ -1,14 +1,20 @@
+import type { LoaderFunction } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { Link, Outlet, useLoaderData } from "@remix-run/react";
+import { getPostListings } from "~/models/post.server";
+import { requireAdminUser } from "~/session.server";
 
-import { getPosts } from "~/models/post.server";
+type LoaderData = {
+  posts: Awaited<ReturnType<typeof getPostListings>>;
+};
 
-export const loader = async () => {
-  return json({ posts: await getPosts() });
+export const loader: LoaderFunction = async ({ request }) => {
+  await requireAdminUser(request);
+  return json({ posts: await getPostListings() });
 };
 
 export default function PostAdmin() {
-  const { posts } = useLoaderData<typeof loader>();
+  const { posts } = useLoaderData<LoaderData>();
   return (
     <div className="mx-auto max-w-4xl">
       <h1 className="my-6 mb-2 border-b-2 text-center text-3xl">Blog Admin</h1>
@@ -30,4 +36,16 @@ export default function PostAdmin() {
       </div>
     </div>
   );
+}
+
+export function ErrorBoundary({ error }: { error: unknown }) {
+  if (error instanceof Error) {
+    return (
+      <div className="text-red-500">
+        Oh no, something went wrong!
+        <pre>{error.message}</pre>
+      </div>
+    );
+  }
+  return <div className="text-red-500">Oh no, something went wrong!</div>;
 }
